@@ -2,6 +2,8 @@
 
 A modern, web-based tool for side-by-side video comparison with synchronized playback and metadata analysis.
 
+🚀 **[Try it live on GitHub Pages](https://angch.github.io/videodiff/)**
+
 > [!IMPORTANT]
 > **Privacy First**: This tool runs entirely in your browser. All video processing and metadata extraction are performed locally using WebAssembly. Your video files are **never uploaded** to any server.
 
@@ -57,6 +59,32 @@ A modern, web-based tool for side-by-side video comparison with synchronized pla
    - **Mouse Wheel**: Zoom in/out (synchronized).
    - **Click & Drag**: Pan around zoomed videos (synchronized).
    - **R**: Reset view (zoom and pan).
+
+## Deployment
+
+This project is automatically deployed to GitHub Pages through CI/CD on every push to the main branch.
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+The build artifacts will be stored in the `dist/` directory.
+
+### Creating a Release
+
+To create a new release, push a tag starting with `v`:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+This will trigger the release workflow, which will:
+- Build the project
+- Create a GitHub release with release notes
+- Attach a downloadable ZIP archive of the build
 
 ## Technologies
 
