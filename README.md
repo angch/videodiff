@@ -20,7 +20,7 @@ A modern, web-based tool for side-by-side video comparison with synchronized pla
   - Bitrate
   - File Size
 - **Local Processing**: All video processing happens locally in your browser using WebAssembly. Your files are never uploaded to a server.
-- **Dark Mode UI**: Sleek, professional interface designed for extended use with Material UI.
+- **Dark Mode UI**: Sleek, modern interface designed for extended use with Material UI.
 
 ## Getting Started
 

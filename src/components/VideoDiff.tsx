@@ -284,8 +284,11 @@ const VideoDiff: React.FC = () => {
                         <Box display="flex" justifyContent="space-between" alignItems="center">
                             <Box display="flex" alignItems="center" gap={2}>
                                 {/* Optional Logo or Icon here */}
-                                <Typography variant="h6" fontWeight="700" sx={{ background: 'linear-gradient(45deg, #3b82f6 30%, #10b981 90%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                <Typography variant="h6" fontWeight="700" sx={{ background: 'linear-gradient(45deg, #3b82f6 30%, #10b981 90%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', flexShrink: 0 }}>
                                     VideoDiff
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: 'text.secondary', display: { xs: 'none', sm: 'block' }, opacity: 0.8 }}>
+                                    — Visual video comparison tool for side-by-side analysis
                                 </Typography>
                             </Box>
 
