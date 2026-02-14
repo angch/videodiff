@@ -1,4 +1,4 @@
-import React, { useRef, useState, ChangeEvent, useEffect } from 'react';
+import React, { useRef, useState, ChangeEvent, useEffect, useCallback } from 'react';
 import { extractMetadata, VideoMetadata } from '../services/metadata';
 import {
     Box,
@@ -71,7 +71,7 @@ const VideoDiff: React.FC = () => {
     };
 
     // Synchronized Play/Pause
-    const togglePlay = () => {
+    const togglePlay = useCallback(() => {
         const nextState = !isPlaying;
         setIsPlaying(nextState);
 
@@ -82,7 +82,7 @@ const VideoDiff: React.FC = () => {
             video1Ref.current?.pause();
             video2Ref.current?.pause();
         }
-    };
+    }, [isPlaying]);
 
     // Keyboard Shortcuts
     useEffect(() => {
@@ -93,11 +93,11 @@ const VideoDiff: React.FC = () => {
             } else if (e.code === 'ArrowRight') {
                 e.preventDefault();
                 const seekTime = e.shiftKey ? 1 / 30 : 5;
-                handleSeek(null as any, Math.min(currentTime + seekTime, duration));
+                handleSeek(null, Math.min(currentTime + seekTime, duration));
             } else if (e.code === 'ArrowLeft') {
                 e.preventDefault();
                 const seekTime = e.shiftKey ? 1 / 30 : 5;
-                handleSeek(null as any, Math.max(currentTime - seekTime, 0));
+                handleSeek(null, Math.max(currentTime - seekTime, 0));
             } else if (e.code === 'KeyR') {
                 resetView();
             } else if (e.code === 'KeyH' || e.code === 'Escape') {
@@ -109,12 +109,12 @@ const VideoDiff: React.FC = () => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isPlaying, currentTime, duration, isSynced, setIsSynced, setIsUiVisible]); // Re-bind if needed, or use functional updates
+    }, [isPlaying, currentTime, duration, isSynced, setIsSynced, setIsUiVisible, togglePlay]); // Re-bind if needed, or use functional updates
 
     const toggleMute = () => setIsMuted(!isMuted);
 
     // Handle Seek
-    const handleSeek = (_: Event, newValue: number | number[]) => {
+    const handleSeek = (_: Event | null, newValue: number | number[]) => {
         const time = newValue as number;
         setCurrentTime(time);
         if (video1Ref.current) video1Ref.current.currentTime = time;
