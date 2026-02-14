@@ -121,7 +121,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
-                    borderRadius: 3,
+                    borderRadius: 0,
                     bgcolor: 'black',
                     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
                     transition: 'all 0.2s',
@@ -146,7 +146,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         muted={isMuted}
                     />
                 ) : (
-                    <Box textAlign="center" p={4} sx={{ opacity: 0.5, border: '2px dashed #444', borderRadius: 4 }}>
+                    <Box textAlign="center" p={4} sx={{ opacity: 0.5, border: '2px dashed #444', borderRadius: 0 }}>
                         <Typography variant="h6" color="text.secondary">Drop Video Here</Typography>
                         <Typography variant="body2" color="text.secondary">or select from list</Typography>
                     </Box>
