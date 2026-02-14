@@ -93,11 +93,11 @@ const VideoDiff: React.FC = () => {
             } else if (e.code === 'ArrowRight') {
                 e.preventDefault();
                 const seekTime = e.shiftKey ? 1 / 30 : 5;
-                handleSeek({} as Event, Math.min(currentTime + seekTime, duration));
+                handleSeek(null, Math.min(currentTime + seekTime, duration));
             } else if (e.code === 'ArrowLeft') {
                 e.preventDefault();
                 const seekTime = e.shiftKey ? 1 / 30 : 5;
-                handleSeek({} as Event, Math.max(currentTime - seekTime, 0));
+                handleSeek(null, Math.max(currentTime - seekTime, 0));
             } else if (e.code === 'KeyR') {
                 resetView();
             } else if (e.code === 'KeyH' || e.code === 'Escape') {
@@ -114,7 +114,7 @@ const VideoDiff: React.FC = () => {
     const toggleMute = () => setIsMuted(!isMuted);
 
     // Handle Seek
-    const handleSeek = (_: Event, newValue: number | number[]) => {
+    const handleSeek = (_: Event | null, newValue: number | number[]) => {
         const time = newValue as number;
         setCurrentTime(time);
         if (video1Ref.current) video1Ref.current.currentTime = time;
