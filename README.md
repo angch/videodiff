@@ -10,9 +10,10 @@ A modern, web-based tool for side-by-side video comparison with synchronized pla
 
 ## Features
 
+- **Advanced Comparison Engine**: Custom YUV-based difference calculation for accurate visual discrepancy detection.
 - **Synchronized Playback**: Play, pause, and seek two videos simultaneously to spot differences easily.
 - **Frame-by-Frame Analysis**: Precise control with frame stepping and keyboard shortcuts.
-- **Zoom & Pan**: Synchronized zooming and panning to inspect details.
+- **Zoom & Pan**: Synchronized zooming and panning with hardware-accelerated transitions for smooth detailed inspection.
 - **Detailed Metadata**: Automatically extracts and displays video information using MediaInfo.js, including:
   - Resolution
   - FPS (Frames Per Second)
@@ -21,6 +22,14 @@ A modern, web-based tool for side-by-side video comparison with synchronized pla
   - File Size
 - **Local Processing**: All video processing happens locally in your browser using WebAssembly. Your files are never uploaded to a server.
 - **Dark Mode UI**: Sleek, modern interface designed for extended use with Material UI.
+
+## How it Works: Diff Engine
+
+The application uses a custom offscreen rendering engine to perform real-time video comparison:
+1. **Sampling**: Capture frames from both videos onto offscreen canvases.
+2. **YUV Conversion**: Convert RGB data to YUV color space to isolate luminance from chrominance.
+3. **Chroma Difference**: Calculate the Euclidean distance between U and V channels to detect color shifts and compression artifacts effectively.
+4. **Visual Feedback**: The "Chroma Diff" view highlights differences by mapping color discrepancies to a visible spectrum.
 
 ## Getting Started
 

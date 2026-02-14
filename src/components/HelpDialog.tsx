@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
 import MouseIcon from '@mui/icons-material/Mouse';
+import CompareIcon from '@mui/icons-material/Compare';
 
 interface HelpDialogProps {
     open: boolean;
@@ -76,25 +77,46 @@ const HelpDialog: React.FC<HelpDialogProps> = ({ open, onClose }) => {
                     </Grid>
                     <Grid item xs={12} sm={6}>
                         <Box display="flex" alignItems="center" gap={1} mb={2}>
+                            <CompareIcon color="primary" fontSize="small" />
+                            <Typography variant="subtitle2" fontWeight="bold">Comparison Modes</Typography>
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" paragraph sx={{ fontSize: '0.8rem' }}>
+                            <strong>Normal:</strong> Side-by-side or overlaid view of both videos.
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" paragraph sx={{ fontSize: '0.8rem' }}>
+                            <strong>Chroma Diff:</strong> Custom engine highlights color differences (U/V channels) between frames, making compression artifacts and color shifts visible.
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                            <strong>Auto-Sync:</strong> Automatically finds the best frame alignment by scanning nearby frames and minimizing the difference score.
+                        </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <Box display="flex" alignItems="center" gap={1} mb={2}>
                             <MouseIcon color="primary" />
                             <Typography variant="subtitle2" fontWeight="bold">Mouse Controls</Typography>
                         </Box>
                         <Typography variant="body2" color="text.secondary" paragraph>
-                            <strong>Scroll Wheel:</strong> Zoom in/out on the video.
+                            <strong>Scroll Wheel:</strong> Zoom in/out (synced across views).
                         </Typography>
                         <Typography variant="body2" color="text.secondary" paragraph>
-                            <strong>Drag:</strong> Pan around when zoomed in.
+                            <strong>Drag:</strong> Pan around when zoomed in (synced).
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            <strong>Drop:</strong> Drag and drop video files directly onto the player areas.
+                            <strong>Drop:</strong> Drag video files directly onto the player areas to load them.
                         </Typography>
                     </Grid>
                 </Grid>
+                <Box mt={3} p={2} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05), borderRadius: 2, border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}` }}>
+                    <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary">Technical Note: Diff Engine</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
+                        The difference engine samples both videos at the current timestamp, converts the pixel data to YUV color space, and calculates the Euclidean distance between the chrominance values. This is more effective than simple RGB subtraction for spotting encoding differences.
+                    </Typography>
+                </Box>
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose} variant="contained" size="small">Got it</Button>
             </DialogActions>
-        </Dialog>
+        </Dialog >
     );
 };
 

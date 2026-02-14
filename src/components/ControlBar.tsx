@@ -22,12 +22,18 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 
+import CompareIcon from '@mui/icons-material/Compare';
+import SyncIcon from '@mui/icons-material/Sync';
+
+export type DiffMode = 'none' | 'panel';
+
 interface ControlBarProps {
     isPlaying: boolean;
     isMuted: boolean;
     isSynced: boolean;
     currentTime: number;
     duration: number;
+    diffMode: DiffMode;
     onTogglePlay: () => void;
     onStepForward: () => void;
     onToggleMute: () => void;
@@ -36,6 +42,8 @@ interface ControlBarProps {
     onResetView: () => void;
     onToggleUi: () => void;
     onHelp: () => void;
+    onSetDiffMode: (mode: DiffMode) => void;
+    onAutoSync: () => void;
 }
 
 const ControlBar: React.FC<ControlBarProps> = ({
@@ -44,6 +52,7 @@ const ControlBar: React.FC<ControlBarProps> = ({
     isSynced,
     currentTime,
     duration,
+    diffMode,
     onTogglePlay,
     onStepForward,
     onToggleMute,
@@ -51,7 +60,9 @@ const ControlBar: React.FC<ControlBarProps> = ({
     onSeek,
     onResetView,
     onToggleUi,
-    onHelp
+    onHelp,
+    onSetDiffMode,
+    onAutoSync
 }) => {
     const theme = useTheme();
 
@@ -88,11 +99,39 @@ const ControlBar: React.FC<ControlBarProps> = ({
                     </IconButton>
                 </Tooltip>
 
+                <Stack direction="row" spacing={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1 }}>
+                    <Tooltip title="Normal Mode">
+                        <IconButton
+                            size="small"
+                            color={diffMode === 'none' ? "primary" : "default"}
+                            onClick={() => onSetDiffMode('none')}
+                        >
+                            <VisibilityOffIcon fontSize="small" sx={{ opacity: diffMode === 'none' ? 1 : 0.4 }} />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Diff Panel Mode">
+                        <IconButton
+                            size="small"
+                            color={diffMode === 'panel' ? "primary" : "default"}
+                            onClick={() => onSetDiffMode('panel')}
+                        >
+                            <CompareIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Auto-Sync Video 2 (S)">
+                        <IconButton onClick={onAutoSync} color="primary" size="small">
+                            <SyncIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                </Stack>
+
                 <Tooltip title="Step Forward (1 Frame)">
                     <IconButton onClick={onStepForward}>
                         <SkipNextIcon />
                     </IconButton>
                 </Tooltip>
+
 
                 <Tooltip title={isMuted ? "Unmute" : "Mute"}>
                     <IconButton onClick={onToggleMute}>

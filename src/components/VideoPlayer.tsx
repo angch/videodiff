@@ -40,6 +40,7 @@ interface VideoPlayerProps {
     onMouseUp: () => void;
     onMouseLeave: () => void;
     onTimeUpdate?: (e: React.SyntheticEvent<HTMLVideoElement>) => void;
+    onSeeked?: (e: React.SyntheticEvent<HTMLVideoElement>) => void;
     onLoadedMetadata?: () => void;
 }
 
@@ -62,6 +63,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     onMouseUp,
     onMouseLeave,
     onTimeUpdate,
+    onSeeked,
     onLoadedMetadata
 }) => {
     const theme = useTheme();
@@ -130,21 +132,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 }}
             >
                 {selectedFile ? (
-                    <video
-                        ref={videoRef}
-                        src={selectedFile}
-                        style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'contain',
-                            transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-                            transformOrigin: 'center',
-                            transition: isDragging ? 'none' : 'transform 0.1s ease-out'
-                        }}
-                        onTimeUpdate={onTimeUpdate}
-                        onLoadedMetadata={onLoadedMetadata}
-                        muted={isMuted}
-                    />
+                    <>
+                        <video
+                            ref={videoRef}
+                            src={selectedFile}
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                                transformOrigin: 'center',
+                                transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+                            }}
+                            onTimeUpdate={onTimeUpdate}
+                            onSeeked={onSeeked}
+                            onLoadedMetadata={onLoadedMetadata}
+                            muted={isMuted}
+                        />
+                    </>
                 ) : (
                     <Box textAlign="center" p={4} sx={{ opacity: 0.5, border: '2px dashed #444', borderRadius: 0 }}>
                         <Typography variant="h6" color="text.secondary">Drop Video Here</Typography>
@@ -155,5 +160,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </Stack>
     );
 };
+
 
 export default VideoPlayer;

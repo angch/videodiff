@@ -8,13 +8,15 @@ import {
     Typography,
     useTheme,
     SelectChangeEvent,
-    Container
+    Container,
+    alpha
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import ControlBar from './ControlBar';
+import ControlBar, { DiffMode } from './ControlBar';
 import VideoPlayer from './VideoPlayer';
 import HelpDialog from './HelpDialog';
 import Draggable from './Draggable';
+import { diffEngine } from '../services/diffEngine';
 
 interface VideoFile extends VideoMetadata {
     name: string;
@@ -36,6 +38,8 @@ const VideoDiff: React.FC = () => {
     const [isUiVisible, setIsUiVisible] = useState(true);
     const [showHelp, setShowHelp] = useState(false);
     const [isSynced, setIsSynced] = useState(true);
+    const [diffMode, setDiffMode] = useState<DiffMode>('none');
+    const [diffImage, setDiffImage] = useState<string | null>(null);
 
     // Zoom and Pan State for player 1
     const [zoom1, setZoom1] = useState(1);
@@ -52,6 +56,38 @@ const VideoDiff: React.FC = () => {
     // Refs
     const video1Ref = useRef<HTMLVideoElement>(null);
     const video2Ref = useRef<HTMLVideoElement>(null);
+
+    // Update diff regularly when playing or on seek
+    const updateDiff = useCallback(() => {
+        if (!video1Ref.current || !video2Ref.current) return;
+
+        if (diffMode === 'panel') {
+            const img = diffEngine.computeDiff(video1Ref.current, video2Ref.current, zoom1, pan1, zoom2, pan2);
+            setDiffImage(img);
+        }
+    }, [diffMode, zoom1, pan1, zoom2, pan2, selectedFile1, selectedFile2]);
+
+    // Effect for regular updates while playing
+    useEffect(() => {
+        if (isPlaying) {
+            const interval = setInterval(updateDiff, 100);
+            return () => clearInterval(interval);
+        }
+    }, [isPlaying, updateDiff]);
+
+    // Handle seek completion to synchronize diff
+    const handleSeeked = useCallback(() => {
+        if (!isPlaying && !video1Ref.current?.seeking && !video2Ref.current?.seeking) {
+            updateDiff();
+        }
+    }, [isPlaying, updateDiff]);
+
+    // Effect for immediate updates on file change while paused
+    useEffect(() => {
+        if (!isPlaying) {
+            updateDiff();
+        }
+    }, [isPlaying, updateDiff, selectedFile1, selectedFile2]);
 
     // File Upload Handler
     const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -104,12 +140,19 @@ const VideoDiff: React.FC = () => {
                 setIsUiVisible(prev => !prev);
             } else if (e.code === 'KeyL') {
                 setIsSynced(prev => !prev);
+            } else if (e.code === 'Digit1') {
+                setDiffMode('none');
+            } else if (e.code === 'Digit2') {
+                setDiffMode('panel');
+            } else if (e.code === 'KeyS') {
+                e.preventDefault();
+                autoSync();
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isPlaying, currentTime, duration, isSynced, setIsSynced, setIsUiVisible, togglePlay]); // Re-bind if needed, or use functional updates
+    }, [isPlaying, currentTime, duration, isSynced, togglePlay]);
 
     const toggleMute = () => setIsMuted(!isMuted);
 
@@ -149,15 +192,13 @@ const VideoDiff: React.FC = () => {
     // Zoom keys
     const handleWheel = (e: React.WheelEvent, playerIndex: 1 | 2) => {
         const scaleAmount = -e.deltaY * 0.001;
-
         const updateZoom = (prevZoom: number) => Math.min(Math.max(1, prevZoom + scaleAmount), 5);
 
         if (isSynced) {
-            const nextZoom1 = updateZoom(zoom1);
-            const nextZoom2 = updateZoom(zoom2);
-            setZoom1(nextZoom1);
-            setZoom2(nextZoom2);
-            if (nextZoom1 === 1) {
+            const nextZoom = updateZoom(zoom1);
+            setZoom1(nextZoom);
+            setZoom2(nextZoom);
+            if (nextZoom === 1) {
                 setPan1({ x: 0, y: 0 });
                 setPan2({ x: 0, y: 0 });
             }
@@ -218,6 +259,55 @@ const VideoDiff: React.FC = () => {
         setPan2({ x: 0, y: 0 });
     };
 
+    const autoSync = useCallback(async () => {
+        if (!video1Ref.current || !video2Ref.current) return;
+
+        // Pause if playing
+        if (isPlaying) {
+            setIsPlaying(false);
+            video1Ref.current.pause();
+            video2Ref.current.pause();
+        }
+
+        const v1 = video1Ref.current;
+        const v2 = video2Ref.current;
+        const startTime = v2.currentTime;
+        const fps = 30; // Default to 30 if not known
+        const frameTime = 1 / fps;
+        const searchRange = 15; // +/- 15 frames
+
+        let bestTime = startTime;
+        let minScore = Infinity;
+
+        const waitForSeek = (video: HTMLVideoElement) => new Promise<void>((resolve) => {
+            const onSeeked = () => {
+                video.removeEventListener('seeked', onSeeked);
+                resolve();
+            };
+            video.addEventListener('seeked', onSeeked);
+            // Safety timeout
+            setTimeout(resolve, 500);
+        });
+
+        for (let i = -searchRange; i <= searchRange; i++) {
+            const targetTime = startTime + i * frameTime;
+            if (targetTime < 0 || targetTime > duration) continue;
+
+            v2.currentTime = targetTime;
+            await waitForSeek(v2);
+
+            const score = diffEngine.getDiffScore(v1, v2, zoom1, pan1, zoom2, pan2);
+            if (score < minScore) {
+                minScore = score;
+                bestTime = targetTime;
+            }
+        }
+
+        v2.currentTime = bestTime;
+        await waitForSeek(v2);
+        updateDiff();
+    }, [isPlaying, duration, zoom1, pan1, updateDiff]);
+
     // Drag and Drop
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
@@ -265,6 +355,7 @@ const VideoDiff: React.FC = () => {
         isSynced,
         currentTime,
         duration,
+        diffMode,
         onTogglePlay: togglePlay,
         onStepForward: stepForward,
         onToggleMute: toggleMute,
@@ -272,7 +363,12 @@ const VideoDiff: React.FC = () => {
         onSeek: handleSeek,
         onResetView: resetView,
         onToggleUi: () => setIsUiVisible(prev => !prev),
-        onHelp: () => setShowHelp(true)
+        onHelp: () => setShowHelp(true),
+        onSetDiffMode: (mode: DiffMode) => {
+            setDiffMode(mode);
+            if (mode !== 'panel') setDiffImage(null);
+        },
+        onAutoSync: autoSync
     };
 
     return (
@@ -318,54 +414,131 @@ const VideoDiff: React.FC = () => {
 
                     {/* Main Video Area */}
                     <Grid container spacing={1} sx={{ flex: 1, overflow: 'hidden' }}>
-                        <Grid item xs={12} md={6} sx={{ height: '100%' }}>
-                            <VideoPlayer
-                                label="Video 1"
-                                files={files}
-                                selectedFile={selectedFile1}
-                                videoRef={video1Ref}
-                                isMuted={isMuted}
-                                zoom={zoom1}
-                                pan={pan1}
-                                isDragging={isDragging && dragSource === 1}
-                                onFileSelect={(e: SelectChangeEvent<string>) => setSelectedFile1(e.target.value)}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onDrop={(e) => handleDrop(e, 1)}
-                                onWheel={(e) => handleWheel(e, 1)}
-                                onMouseDown={(e) => handleMouseDown(e, 1)}
-                                onMouseMove={handleMouseMove}
-                                onMouseUp={handleMouseUp}
-                                onMouseLeave={handleMouseLeaveVideo}
-                                onTimeUpdate={handleTimeUpdate}
-                                onLoadedMetadata={handleLoadedMetadata}
-                            />
+                        {/* Player Column(s) */}
+                        <Grid item xs={12} md={diffMode === 'panel' ? 6 : 12} sx={{
+                            height: '100%',
+                            transition: 'all 0.5s ease-in-out',
+                        }}>
+                            <Box sx={{
+                                height: '100%',
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'row',
+                                gap: 1
+                            }}>
+                                {/* Video 1 */}
+                                <Box sx={{
+                                    flex: 1,
+                                    height: '100%',
+                                    transition: 'all 0.5s ease-in-out',
+                                    zIndex: 1
+                                }}>
+                                    <VideoPlayer
+                                        label="Video 1"
+                                        files={files}
+                                        selectedFile={selectedFile1}
+                                        videoRef={video1Ref}
+                                        isMuted={isMuted}
+                                        zoom={zoom1}
+                                        pan={pan1}
+                                        isDragging={isDragging && dragSource === 1}
+                                        onFileSelect={(e: SelectChangeEvent<string>) => setSelectedFile1(e.target.value)}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={(e) => handleDrop(e, 1)}
+                                        onWheel={(e) => handleWheel(e, 1)}
+                                        onMouseDown={(e) => handleMouseDown(e, 1)}
+                                        onMouseMove={handleMouseMove}
+                                        onMouseUp={handleMouseUp}
+                                        onMouseLeave={handleMouseLeaveVideo}
+                                        onTimeUpdate={handleTimeUpdate}
+                                        onSeeked={handleSeeked}
+                                        onLoadedMetadata={handleLoadedMetadata}
+                                    />
+                                </Box>
+
+                                {/* Video 2 */}
+                                <Box sx={{
+                                    flex: 1,
+                                    height: '100%',
+                                    transition: 'all 0.5s ease-in-out',
+                                    position: diffMode === 'panel' ? 'absolute' : 'relative',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    zIndex: 2,
+                                    opacity: diffMode === 'panel' ? 0.5 : 1,
+                                    pointerEvents: diffMode === 'panel' ? 'none' : 'auto' // Prevent interaction overlaying V1 in panel mode
+                                }}>
+                                    <VideoPlayer
+                                        label="Video 2"
+                                        files={files}
+                                        selectedFile={selectedFile2}
+                                        videoRef={video2Ref}
+                                        isMuted={isMuted}
+                                        zoom={zoom2}
+                                        pan={pan2}
+                                        isDragging={isDragging && dragSource === 2}
+                                        onFileSelect={(e: SelectChangeEvent<string>) => setSelectedFile2(e.target.value)}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={(e) => handleDrop(e, 2)}
+                                        onWheel={(e) => handleWheel(e, 2)}
+                                        onMouseDown={(e) => handleMouseDown(e, 2)}
+                                        onMouseMove={handleMouseMove}
+                                        onMouseUp={handleMouseUp}
+                                        onMouseLeave={handleMouseLeaveVideo}
+                                        onTimeUpdate={handleTimeUpdate}
+                                        onSeeked={handleSeeked}
+                                        onLoadedMetadata={handleLoadedMetadata}
+                                    />
+                                </Box>
+                            </Box>
                         </Grid>
-                        <Grid item xs={12} md={6} sx={{ height: '100%' }}>
-                            <VideoPlayer
-                                label="Video 2"
-                                files={files}
-                                selectedFile={selectedFile2}
-                                videoRef={video2Ref}
-                                isMuted={isMuted}
-                                zoom={zoom2}
-                                pan={pan2}
-                                isDragging={isDragging && dragSource === 2}
-                                onFileSelect={(e: SelectChangeEvent<string>) => setSelectedFile2(e.target.value)}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onDrop={(e) => handleDrop(e, 2)}
-                                onWheel={(e) => handleWheel(e, 2)}
-                                onMouseDown={(e) => handleMouseDown(e, 2)}
-                                onMouseMove={handleMouseMove}
-                                onMouseUp={handleMouseUp}
-                                onMouseLeave={handleMouseLeaveVideo}
-                                onLoadedMetadata={handleLoadedMetadata}
-                            />
-                        </Grid>
+
+                        {/* Diff Panel Column */}
+                        {diffMode === 'panel' && (
+                            <Grid item xs={12} md={6} sx={{
+                                height: '100%',
+                                animation: 'fadeIn 0.5s ease-in-out 0.5s both',
+                            }}>
+                                <Stack spacing={1} sx={{ height: '100%' }}>
+                                    {/* Header Placeholder (Select height ~40px) */}
+                                    <Box sx={{ height: 40, display: 'flex', alignItems: 'center' }}>
+                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>CHROMA DIFF</Typography>
+                                    </Box>
+
+                                    {/* Chips Placeholder (Chip height ~20px) */}
+                                    <Box sx={{ height: 20 }} />
+
+                                    <Box sx={{
+                                        flex: 1,
+                                        bgcolor: 'black',
+                                        borderRadius: 0,
+                                        overflow: 'hidden',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
+                                    }}>
+                                        {diffImage && (
+                                            <img src={diffImage} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="diff" />
+                                        )}
+                                    </Box>
+                                </Stack>
+                            </Grid>
+                        )}
                     </Grid>
                 </Stack>
             </Container>
+
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateX(20px); }
+                    to { opacity: 1; transform: translateX(0); }
+                }
+            `}</style>
+
 
             {/* Floating Controls - Draggable */}
             {!isUiVisible && (
